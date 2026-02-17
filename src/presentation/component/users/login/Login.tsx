@@ -3,7 +3,7 @@ import { View, Text, TextInput, TouchableOpacity, ScrollView, Dimensions, StyleS
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useLogin } from '../../../hooks/useLogin';
 
-const Login = ({ onLoginSuccess, onLoginError }: { onLoginSuccess?: () => void, onLoginError?: (err: string) => void }) => {
+const Login = ({ onLoginSuccess, onLoginError, onShowRegister }: { onLoginSuccess?: () => void, onLoginError?: (err: string) => void, onShowRegister?: () => void }) => {
   const insets = useSafeAreaInsets();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -112,7 +112,7 @@ const Login = ({ onLoginSuccess, onLoginError }: { onLoginSuccess?: () => void, 
             {/* Signup */}
             <View style={styles.signupContainer}>
               <Text style={styles.mutedText}>NO CREDENTIALS? </Text>
-              <TouchableOpacity onPress={() => {}}>
+              <TouchableOpacity onPress={() => onShowRegister?.()}>
                 <Text style={styles.linkTextBold}>ENROLL NOW</Text>
               </TouchableOpacity>
             </View>

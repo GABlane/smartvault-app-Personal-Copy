@@ -18,6 +18,7 @@ export const API_CONFIG = {
       CONFIRM_PASSWORD_RESET: '/api/v1/auth/confirm-password-reset',
     },
     USERS: {
+      CREATE: '/api/v1/users',
       ME: '/api/v1/users/me',
       LIST: '/users/',
       REMOVE_FROM_VAULT: (vaultId: number, userId: number) => `/vault-memberships/${userId}/vault/${vaultId}`,

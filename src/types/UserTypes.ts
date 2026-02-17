@@ -41,6 +41,27 @@ export interface UserLoginRequest {
   password: string;
 }
 
+// OTP-based registration types
+export interface OTPRequestPayload {
+  email: string;
+}
+
+export interface OTPVerifyPayload {
+  email: string;
+  otp: string;
+}
+
+export interface OTPVerifyResponse {
+  signup_ticket: string;
+}
+
+export interface SignupRequest {
+  email: string;
+  password: string;
+  signup_ticket: string;
+  full_name?: string;
+}
+
 export interface UserLoginResponse {
   access_token: string;
   refresh_token: string;

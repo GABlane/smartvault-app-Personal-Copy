@@ -116,6 +116,38 @@ export class AuthService {
   }
 
   /**
+   * Register a new user
+   * POST /api/v1/users — direct user creation (no OTP)
+   */
+  static async register(
+    email: string,
+    password: string,
+    fullName?: string
+  ): Promise<void> {
+    if (__DEV__) {
+      console.log('AuthService - Register attempt for:', email);
+    }
+
+    try {
+      await ApiService.postPublic<any>(
+        API_CONFIG.ENDPOINTS.USERS.CREATE,
+        {
+          email,
+          password,
+          full_name: fullName || null,
+        }
+      );
+
+      if (__DEV__) {
+        console.log('AuthService - Registration successful for:', email);
+      }
+    } catch (error) {
+      this.logError('Register', error, { email });
+      throw this.processError(error, 'registration');
+    }
+  }
+
+  /**
    * Get stored authentication token
    */
   static async getStoredToken(): Promise<string | null> {

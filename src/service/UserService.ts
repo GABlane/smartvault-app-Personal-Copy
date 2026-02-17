@@ -597,8 +597,8 @@ export class UserService {
    * @returns boolean
    */
   static isValidPassword(password: string): boolean {
-    // At least 6 characters (matching backend validation)
-    return password.length >= 6;
+    // At least 12 characters (matching backend validation)
+    return password.length >= 12;
   }
 
   /**
