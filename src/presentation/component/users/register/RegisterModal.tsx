@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,6 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRegister } from '../../../hooks/useRegister';
-import { UserService } from '../../../../service/UserService';
 
 type RegisterProps = {
   onRegisterSuccess?: () => void;
@@ -21,30 +20,80 @@ type RegisterProps = {
 const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBackToLogin }) => {
   const insets = useSafeAreaInsets();
   const { height } = Dimensions.get('window');
-  const { isLoading, error, clearError, register } = useRegister();
+  const {
+    step,
+    isLoading,
+    error,
+    email,
+    clearError,
+    requestOtp,
+    verifyOtp,
+    signup,
+    resendOtp,
+    goBack,
+  } = useRegister();
 
-  const [email, setEmail] = useState('');
+  const [emailInput, setEmailInput] = useState('');
+  const [otp, setOtp] = useState('');
   const [fullName, setFullName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  const isValid =
-    UserService.isValidEmail(email.trim()) &&
-    password.length >= 12 &&
-    password === confirmPassword;
+  const isEmailValid = emailInput.trim().includes('@') && emailInput.trim().includes('.');
+  const isOtpValid = otp.trim().length === 6;
+  const isPasswordValid = password.length >= 12 && password === confirmPassword;
+  const displayEmail = email || emailInput.trim();
 
-  const handleRegister = async () => {
-    if (!isValid) return;
+  useEffect(() => {
+    if (step === 'email' && email) {
+      setEmailInput(email);
+    }
+    if (step === 'otp') {
+      setOtp('');
+    }
+    if (step === 'details') {
+      setPassword('');
+      setConfirmPassword('');
+      setShowPassword(false);
+      setShowConfirmPassword(false);
+    }
+  }, [step, email]);
+
+  const handleRequestOtp = async () => {
+    if (!isEmailValid) return;
 
     try {
-      await register(email, password, fullName || undefined);
-      onRegisterSuccess?.();
+      await requestOtp(emailInput);
     } catch {
-      // Error is handled by the hook
+      // Error handled by hook
     }
   };
+
+  const handleVerifyOtp = async () => {
+    if (!isOtpValid) return;
+
+    try {
+      await verifyOtp(otp);
+    } catch {
+      // Error handled by hook
+    }
+  };
+
+  const handleSignup = async () => {
+    if (!isPasswordValid) return;
+
+    try {
+      await signup(password, fullName || undefined);
+      onRegisterSuccess?.();
+    } catch {
+      // Error handled by hook
+    }
+  };
+
+  const subtitle =
+    step === 'email' ? 'NEW ENROLLMENT' : step === 'otp' ? 'VERIFY IDENTITY' : 'COMPLETE ENROLLMENT';
 
   return (
     <ScrollView
@@ -66,124 +115,225 @@ const Register: React.FC<RegisterProps> = ({ onRegisterSuccess, onBackToLogin })
               <Text style={styles.heroText}>SV</Text>
             </View>
             <Text style={styles.title}>SMARTVAULT</Text>
-            <Text style={styles.subtitle}>NEW ENROLLMENT</Text>
+            <Text style={styles.subtitle}>{subtitle}</Text>
           </View>
 
           {/* Registration Form */}
           <View style={styles.card}>
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>IDENTIFIER</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="EMAIL"
-                  placeholderTextColor="#52525B"
-                  value={email}
-                  onChangeText={(text) => {
-                    setEmail(text);
-                    clearError();
-                  }}
-                  autoCapitalize="none"
-                  keyboardType="email-address"
-                  autoComplete="email"
-                  editable={!isLoading}
-                />
-              </View>
-            </View>
+            {step === 'email' && (
+              <>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>IDENTIFIER</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="EMAIL"
+                      placeholderTextColor="#52525B"
+                      value={emailInput}
+                      onChangeText={(text) => {
+                        setEmailInput(text);
+                        clearError();
+                      }}
+                      autoCapitalize="none"
+                      keyboardType="email-address"
+                      autoComplete="email"
+                      editable={!isLoading}
+                    />
+                  </View>
+                </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>FULL NAME</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="OPTIONAL"
-                  placeholderTextColor="#52525B"
-                  value={fullName}
-                  onChangeText={setFullName}
-                  autoCapitalize="words"
-                  editable={!isLoading}
-                />
-              </View>
-            </View>
+                {error && (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>ACCESS KEY</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="PASSWORD"
-                  placeholderTextColor="#52525B"
-                  value={password}
-                  onChangeText={(text) => {
-                    setPassword(text);
-                    clearError();
-                  }}
-                  secureTextEntry={!showPassword}
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
                 <TouchableOpacity
-                  onPress={() => setShowPassword(!showPassword)}
-                  style={styles.eyeIcon}
+                  onPress={handleRequestOtp}
+                  disabled={isLoading || !isEmailValid}
+                  style={[styles.button, (isLoading || !isEmailValid) && styles.buttonDisabled]}
                 >
-                  <Text style={styles.eyeText}>{showPassword ? 'HIDE' : 'SHOW'}</Text>
+                  {isLoading ? (
+                    <ActivityIndicator color="black" />
+                  ) : (
+                    <Text style={styles.buttonText}>SEND VERIFICATION CODE</Text>
+                  )}
                 </TouchableOpacity>
-              </View>
-              <Text style={styles.hintText}>MIN 12 CHARACTERS</Text>
-            </View>
 
-            <View style={styles.inputContainer}>
-              <Text style={styles.label}>CONFIRM ACCESS KEY</Text>
-              <View style={styles.inputWrapper}>
-                <TextInput
-                  style={styles.input}
-                  placeholder="CONFIRM PASSWORD"
-                  placeholderTextColor="#52525B"
-                  value={confirmPassword}
-                  onChangeText={(text) => {
-                    setConfirmPassword(text);
-                    clearError();
-                  }}
-                  secureTextEntry={!showConfirmPassword}
-                  autoCapitalize="none"
-                  editable={!isLoading}
-                />
-                <TouchableOpacity
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                  style={styles.eyeIcon}
-                >
-                  <Text style={styles.eyeText}>{showConfirmPassword ? 'HIDE' : 'SHOW'}</Text>
-                </TouchableOpacity>
-              </View>
-              {confirmPassword.length > 0 && password !== confirmPassword && (
-                <Text style={styles.validationError}>PASSWORDS DO NOT MATCH</Text>
-              )}
-            </View>
-
-            {error && (
-              <View style={styles.errorContainer}>
-                <Text style={styles.errorText}>{error}</Text>
-              </View>
+                <View style={styles.signupContainer}>
+                  <Text style={styles.mutedText}>ALREADY ENROLLED? </Text>
+                  <TouchableOpacity onPress={() => onBackToLogin?.()}>
+                    <Text style={styles.linkTextBold}>AUTHENTICATE</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
             )}
 
-            <TouchableOpacity
-              onPress={handleRegister}
-              disabled={isLoading || !isValid}
-              style={[styles.button, (isLoading || !isValid) && styles.buttonDisabled]}
-            >
-              {isLoading ? (
-                <ActivityIndicator color="black" />
-              ) : (
-                <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
-              )}
-            </TouchableOpacity>
+            {step === 'otp' && (
+              <>
+                <View style={styles.subtitleEmailContainer}>
+                  <Text style={styles.subtitleEmailText}>{displayEmail}</Text>
+                </View>
 
-            <View style={styles.signupContainer}>
-              <Text style={styles.mutedText}>ALREADY ENROLLED? </Text>
-              <TouchableOpacity onPress={() => onBackToLogin?.()}>
-                <Text style={styles.linkTextBold}>AUTHENTICATE</Text>
-              </TouchableOpacity>
-            </View>
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>VERIFICATION CODE</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={[styles.input, styles.otpInput]}
+                      placeholder="______"
+                      placeholderTextColor="#52525B"
+                      value={otp}
+                      onChangeText={(text) => {
+                        const sanitized = text.replace(/[^0-9]/g, '');
+                        setOtp(sanitized);
+                        clearError();
+                      }}
+                      keyboardType="numeric"
+                      maxLength={6}
+                      textAlign="center"
+                      editable={!isLoading}
+                    />
+                  </View>
+                </View>
+
+                {error && (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  onPress={handleVerifyOtp}
+                  disabled={isLoading || !isOtpValid}
+                  style={[styles.button, (isLoading || !isOtpValid) && styles.buttonDisabled]}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="black" />
+                  ) : (
+                    <Text style={styles.buttonText}>VERIFY CODE</Text>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  onPress={() => resendOtp()}
+                  disabled={isLoading}
+                  style={styles.secondaryLink}
+                >
+                  <Text style={styles.linkTextBold}>RESEND CODE</Text>
+                </TouchableOpacity>
+
+                <View style={styles.bottomLinkContainer}>
+                  <TouchableOpacity onPress={() => goBack()} disabled={isLoading}>
+                    <Text style={styles.linkTextBold}>BACK</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
+
+            {step === 'details' && (
+              <>
+                <View style={styles.subtitleEmailContainer}>
+                  <Text style={styles.subtitleEmailText}>{displayEmail}</Text>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>FULL NAME</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="OPTIONAL"
+                      placeholderTextColor="#52525B"
+                      value={fullName}
+                      onChangeText={setFullName}
+                      autoCapitalize="words"
+                      editable={!isLoading}
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>ACCESS KEY</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="PASSWORD"
+                      placeholderTextColor="#52525B"
+                      value={password}
+                      onChangeText={(text) => {
+                        setPassword(text);
+                        clearError();
+                      }}
+                      secureTextEntry={!showPassword}
+                      autoCapitalize="none"
+                      editable={!isLoading}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeIcon}
+                      disabled={isLoading}
+                    >
+                      <Text style={styles.eyeText}>{showPassword ? 'HIDE' : 'SHOW'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                  <Text style={styles.hintText}>MIN 12 CHARACTERS</Text>
+                </View>
+
+                <View style={styles.inputContainer}>
+                  <Text style={styles.label}>CONFIRM ACCESS KEY</Text>
+                  <View style={styles.inputWrapper}>
+                    <TextInput
+                      style={styles.input}
+                      placeholder="CONFIRM PASSWORD"
+                      placeholderTextColor="#52525B"
+                      value={confirmPassword}
+                      onChangeText={(text) => {
+                        setConfirmPassword(text);
+                        clearError();
+                      }}
+                      secureTextEntry={!showConfirmPassword}
+                      autoCapitalize="none"
+                      editable={!isLoading}
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                      style={styles.eyeIcon}
+                      disabled={isLoading}
+                    >
+                      <Text style={styles.eyeText}>
+                        {showConfirmPassword ? 'HIDE' : 'SHOW'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                  {confirmPassword.length > 0 && password !== confirmPassword && (
+                    <Text style={styles.validationError}>PASSWORDS DO NOT MATCH</Text>
+                  )}
+                </View>
+
+                {error && (
+                  <View style={styles.errorContainer}>
+                    <Text style={styles.errorText}>{error}</Text>
+                  </View>
+                )}
+
+                <TouchableOpacity
+                  onPress={handleSignup}
+                  disabled={isLoading || !isPasswordValid}
+                  style={[styles.button, (isLoading || !isPasswordValid) && styles.buttonDisabled]}
+                >
+                  {isLoading ? (
+                    <ActivityIndicator color="black" />
+                  ) : (
+                    <Text style={styles.buttonText}>CREATE ACCOUNT</Text>
+                  )}
+                </TouchableOpacity>
+
+                <View style={styles.bottomLinkContainer}>
+                  <TouchableOpacity onPress={() => goBack()} disabled={isLoading}>
+                    <Text style={styles.linkTextBold}>BACK</Text>
+                  </TouchableOpacity>
+                </View>
+              </>
+            )}
           </View>
         </View>
       </View>
@@ -236,6 +386,16 @@ const styles = StyleSheet.create({
     letterSpacing: 4,
     marginTop: 4,
   },
+  subtitleEmailContainer: {
+    marginBottom: 24,
+    alignItems: 'center',
+  },
+  subtitleEmailText: {
+    color: '#52525B',
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 1,
+  },
   card: {
     backgroundColor: '#000000',
   },
@@ -273,6 +433,10 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#FFFFFF',
+  },
+  otpInput: {
+    fontSize: 24,
+    letterSpacing: 8,
   },
   eyeIcon: {
     marginLeft: 12,
@@ -321,6 +485,13 @@ const styles = StyleSheet.create({
     fontWeight: '900',
     letterSpacing: 1,
     textDecorationLine: 'underline',
+  },
+  secondaryLink: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  bottomLinkContainer: {
+    alignItems: 'center',
   },
   errorContainer: {
     backgroundColor: '#2D1215',

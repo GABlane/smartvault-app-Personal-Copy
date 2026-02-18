@@ -116,34 +116,90 @@ export class AuthService {
   }
 
   /**
-   * Register a new user
-   * POST /api/v1/users — direct user creation (no OTP)
+   * Request OTP for registration
+   * POST /api/v1/auth/request-otp
    */
-  static async register(
-    email: string,
-    password: string,
-    fullName?: string
-  ): Promise<void> {
+  static async requestOtp(email: string): Promise<void> {
     if (__DEV__) {
-      console.log('AuthService - Register attempt for:', email);
+      console.log('AuthService - Request OTP for:', email);
     }
 
     try {
-      await ApiService.postPublic<any>(
-        API_CONFIG.ENDPOINTS.USERS.CREATE,
+      await ApiService.postPublic<void>(
+        API_CONFIG.ENDPOINTS.AUTH.REQUEST_OTP,
+        { email }
+      );
+
+      if (__DEV__) {
+        console.log('AuthService - OTP request successful for:', email);
+      }
+    } catch (error) {
+      this.logError('Request OTP', error, { email });
+      throw this.processError(error, 'request otp');
+    }
+  }
+
+  /**
+   * Verify OTP and receive signup ticket
+   * POST /api/v1/auth/verify-otp
+   */
+  static async verifyOtp(email: string, otp: string): Promise<string> {
+    if (__DEV__) {
+      console.log('AuthService - Verify OTP for:', email);
+    }
+
+    try {
+      const responseData = await ApiService.postPublic<{ signup_ticket: string }>(
+        API_CONFIG.ENDPOINTS.AUTH.VERIFY_OTP,
+        { email, otp }
+      );
+
+      if (!responseData || !responseData.signup_ticket) {
+        throw new Error('Invalid response format from server');
+      }
+
+      if (__DEV__) {
+        console.log('AuthService - OTP verified for:', email);
+      }
+
+      return responseData.signup_ticket;
+    } catch (error) {
+      this.logError('Verify OTP', error, { email });
+      throw this.processError(error, 'verify otp');
+    }
+  }
+
+  /**
+   * Complete signup using signup ticket
+   * POST /api/v1/auth/signup
+   */
+  static async signup(
+    email: string,
+    password: string,
+    fullName: string | null,
+    signupTicket: string
+  ): Promise<void> {
+    if (__DEV__) {
+      console.log('AuthService - Signup attempt for:', email);
+    }
+
+    try {
+      await ApiService.postPublic<void>(
+        API_CONFIG.ENDPOINTS.AUTH.SIGNUP,
         {
           email,
           password,
-          full_name: fullName || null,
+          full_name: fullName,
+          signup_ticket: signupTicket,
         }
       );
 
       if (__DEV__) {
-        console.log('AuthService - Registration successful for:', email);
+        console.log('AuthService - Signup successful for:', email);
       }
     } catch (error) {
-      this.logError('Register', error, { email });
-      throw this.processError(error, 'registration');
+      this.logError('Signup', error, { email });
+      throw this.processError(error, 'signup');
     }
   }
 
