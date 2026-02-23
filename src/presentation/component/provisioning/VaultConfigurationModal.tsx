@@ -39,9 +39,8 @@ const VaultConfigurationModal: React.FC<VaultConfigurationModalProps> = ({
     }
 
     const vaultData = {
-      device_id: selectedDevice.name, // Use device name as vault ID
-      name: vaultName.trim(),
-      location: location.trim() || undefined,
+      hardware_uuid: selectedDevice.name,
+      vault_name: vaultName.trim(),
     };
 
     console.log('Creating vault with data:', vaultData);

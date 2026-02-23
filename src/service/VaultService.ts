@@ -17,18 +17,14 @@ export interface VaultMembership {
 }
 
 export interface VaultCreateData {
-  device_id: string;
-  name: string;
-  location?: string;
+  vault_name: string;
+  hardware_uuid?: string;
 }
 
 export interface VaultCreationResult {
-  id: string;
-  device_id: string;
-  name: string;
-  location?: string;
-  status: string;
-  created_at: string;
+  vault_id: string;
+  hardware_uuid: string;
+  vault_name: string | null;
 }
 
 export interface ApiResponse<T> {
@@ -197,22 +193,18 @@ export class VaultService {
     token?: string
   ): Promise<VaultCreationResult> {
     try {
-      console.log('🔍 VaultService: Creating vault with data:', vaultData);
+      console.log('VaultService: Creating vault with data:', vaultData);
 
-      const response = await ApiService.post<ApiResponse<VaultCreationResult>>(
+      const response = await ApiService.post<VaultCreationResult>(
         API_CONFIG.ENDPOINTS.VAULTS.PROVISION,
         vaultData,
         token
       );
 
-      if (!response.success) {
-        throw new Error(response.detail || 'Failed to create vault');
-      }
-
-      console.log('✅ VaultService: Vault created successfully:', response.data);
-      return response.data;
+      console.log('VaultService: Vault created successfully:', response);
+      return response;
     } catch (error) {
-      console.error('❌ VaultService: Error creating vault:', error);
+      console.error('VaultService: Error creating vault:', error);
       throw error;
     }
   }

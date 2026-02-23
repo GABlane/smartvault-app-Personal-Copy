@@ -120,9 +120,20 @@ export default function HomeScreen({
     Alert.alert('Unlock request', `Unlock request sent for ${vault.vault_name || `UNIT-${vault.vault_id}`}.`);
   };
 
-  const handleAddVault = () => {
+  const handleAddVault = async () => {
     const name = newVaultName.trim();
     if (!name) return;
+    if (!MOCK_MODE) {
+      try {
+        await VaultService.createVault({ vault_name: name });
+        setAddVaultModalVisible(false);
+        setNewVaultName('');
+        await loadData();
+      } catch (e) {
+        Alert.alert('Failed', e instanceof Error ? e.message : 'Could not create vault.');
+      }
+      return;
+    }
     const mockVault: VaultMembership = {
       vault_id: Date.now(),
       vault_name: name,
@@ -190,7 +201,11 @@ export default function HomeScreen({
       <View className="mb-12">
         <QuickActions
             onRemoteUnlock={() => {
-              setSelectedRemoteVault(vaults[0] ?? null);
+              if (!vaults[0]) {
+                Alert.alert('No Vault', 'No vault available for remote unlock.');
+                return;
+              }
+              setSelectedRemoteVault(vaults[0]);
               setBiometricModalVisible(true);
             }}
             onClearAlarm={() => Alert.alert('Command', 'Alarm buffer cleared.')}

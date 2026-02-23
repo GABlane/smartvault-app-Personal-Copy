@@ -17,7 +17,7 @@ export const useVaultCreation = () => {
     } catch (err) {
       const errorMessage = handleAPIError(err, {
         action: 'Create vault',
-        context: `Device ID: ${vaultData.device_id}, Name: ${vaultData.name}`
+        context: `Hardware UUID: ${vaultData.hardware_uuid ?? 'auto'}, Name: ${vaultData.vault_name}`
       }, {
         showAlert: true,
         logError: true,
